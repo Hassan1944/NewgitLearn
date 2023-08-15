@@ -1,0 +1,41 @@
+Learn Git 
+
+First step is to install git (basic)
+Step1 : You Need to Open the Git-Bash
+Step2 : You need to add the UserName & Email
+         Using this Command(git config --global user.name "Hassan Shaik"
+                 git config --global user.email Shaik.hassan.75@gmail.com)
+Step3 : Locate to the project folder using the cd c:/Desktop/Myproject
+        If you need to add this file to Git Use the Command <"git init">
+Step4 :If you want to Add them them Use the Command <"git add [File Name] ">
+        Add the entire folder or Directory <"git add ."> 
+		If you want to remove the file in the dir/folder
+		If you want to restore the file use </git restore "main.java"\>
+		If you want to rename the file use </git mv "main.java" "main_1.java"\>
+		If you want to remove the file from the staging use <"git restore --staged main.java">
+Step5 : If you need to make the tarck of the file use <"git commit -m"Adding files to the tracker" />
+        If you made any chages to the file which you have added
+        Use <"git diff">
+		If you want to see the History or Logs use the command  <"git log">
+		If you want to view in one line add <"git log --oneline ">
+		
+		$ git log --oneline
+		dcba30b (HEAD -> master) New file to commit09
+		427101c Change the file name
+		ea8d4d8 Adding file to track local
+
+		If you want to goto previous commits <"git reset dcba30b ">
+		If you want to modify the order in the logs or in History book
+		<"git rebase -i --root ">
+Step6 : Creating the branch like the copy of the main branch
+		to create a branch use <"git branch NewChangeJava">
+		If you want to see which branch are you in use <"git branch">
+		it displays all the branchs
+		If you want to switch the branch use <"git switch NewChangeJava">
+		If you want to merge the changes in the branch use <git merge -m"newchanges merged" >
+		If you want help use <"git help branch">
+		
+		
+		
+		
+		
