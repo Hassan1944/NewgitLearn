@@ -34,6 +34,11 @@ Step6 : Creating the branch like the copy of the main branch
 		If you want to switch the branch use <"git switch NewChangeJava">
 		If you want to merge the changes in the branch use <git merge -m"newchanges merged" >
 		If you want help use <"git help branch">
+		If any changes are done in the remote branch we need in local 
+		<"git fetch">
+		If you want that changes need to merge in the branch 
+		<"git merge">
+		Insted of using the fetch and merger use the <"Git Pull">
 		
 		
 		
