@@ -1,0 +1,102 @@
+const fs = require('fs');
+const csv = require('csv-parser');
+const axios = require('axios');
+ //Enter the object to view from BulkdataLoad File of Salesforce
+const objectsToProcess = [
+  'Customer Trade Org Hierarchy',
+  'Customer Misc Relationship',
+  'Customer Extension',
+  'Product',
+  'Payment',
+  'Account',
+  'Fund Transaction',
+  'Multi-Fund Transaction',
+  'Tactic',
+  'Promotion',
+  'Product Part',
+  'Product Hierarchy',
+  'Fund'
+];
+const filupload = 'Bulkdata.csv';
+const accessToken ='abciwo42u8992hiwsdnlkjo2'; // Replace 'YOUR_ACCESS_TOKEN' with your Salesforce access token from postman or any other source
+const headers = {
+  Authorization: `Bearer ${accessToken}`,
+};
+ 
+const recordsByObject = {};
+ 
+fs.createReadStream(filupload)
+  .pipe(csv())
+  .on('data', (row) => {
+    const user =row['Submitted By']
+    if(user=='External User, MDLZ TPM'){
+      const object = row['Object'];
+      const recordsProcessed = parseInt(row['Records Processed']);
+      const recordsFailed = parseInt(row['Records Failed']);
+      const jobIdColumn = findColumnByRegex(row, /Job\s*ID/i);
+      const jobId = row[jobIdColumn];
+      
+ 
+      if (objectsToProcess.includes(object)) {
+        if (!recordsByObject[object]) {
+          recordsByObject[object] = {
+            processed: 0,
+            failed: 0,
+            jobIds: [],
+          };
+        }
+ 
+        recordsByObject[object].processed += recordsProcessed;
+        recordsByObject[object].failed += recordsFailed;
+        if (recordsFailed > 0) {
+          recordsByObject[object].jobIds.push(jobId);
+       
+        }
+      }
+    }
+   
+  })
+  .on('end', async () => {
+    for (const object of objectsToProcess) {
+      const objData = recordsByObject[object] || { processed: 0, failed: 0, jobIds: [] };
+      const success = objData.processed - objData.failed;
+ 
+      console.log(`Object: ${object}`);
+      console.log(`Processed Records: ${objData.processed}`);
+      console.log(`Failed Records: ${objData.failed}`);
+      console.log(`Success Records: ${success}`);
+      // if (objData.failed > 0) {
+       
+      //   console.log(`Job IDs with Failures: ${objData.jobIds.join(', ')}`);
+ 
+      // }
+      console.log('---');
+    }
+ 
+    try {
+      for (const object in recordsByObject) {
+        if (recordsByObject.hasOwnProperty(object)) {
+          const jobIds = recordsByObject[object].jobIds;
+          for (const jobId of jobIds) {
+            const response = await axios.get(`https://your-SFinstance.my.salesforce.com/services/data/v53.0/jobs/ingest/${jobId}/failedResults`, { headers });
+            const failedRecords = response.data;
+ 
+            fs.appendFileSync(`failure_${object}_results.csv`, `${failedRecords}\n`);
+          }
+        }
+      }
+ 
+      console.log('Failures saved to separate files for each object.');
+    } catch (error) {
+      console.error('Error processing data:', error);
+    }
+  });
+ // Function to find column name by regular expression pattern
+function findColumnByRegex(row, regex) {
+    for (const column in row) {
+        if (row.hasOwnProperty(column) && regex.test(column)) {
+            return column;
+        }
+    }
+    return null;
+}
