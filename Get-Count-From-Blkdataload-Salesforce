@@ -1,0 +1,64 @@
+const fs = require('fs');
+const csv = require('csv-parser');
+//specify the objects as per your needs
+const objectsToProcess = [
+  'Customer',
+  'Customer Extension',
+  'Customer Misc Relationship',
+  'Customer Trade Org Hierarchy',
+  'Product',
+  'Product Hierarchy'
+];
+//upload only csv file 
+const filupload='BulkdataLoad22.csv'; 
+
+const recordsByObject = {};
+
+fs.createReadStream(filupload)
+  .pipe(csv())
+  .on('data', (row) => {
+    const object = row['Object'];
+    const recordsProcessed = parseInt(row['Records Processed']);
+    const recordsFailed = parseInt(row['Records Failed']);
+    const jobId = row['﻿Job ID'];
+
+    if (objectsToProcess.includes(object)) {
+      if (!recordsByObject[object]) {
+        recordsByObject[object] = {
+          processed: 0,
+          failed: 0,
+          jobIds: [],
+         // console.log(jobId);
+        };
+      }
+
+      // Update processed and failed counts for the object
+      recordsByObject[object].processed += recordsProcessed;
+      recordsByObject[object].failed += recordsFailed;
+
+      if (recordsFailed > 0) {
+        recordsByObject[object].jobIds.push(`'${jobId}'`);
+      
+      }
+    }
+  })
+  .on('end', () => {
+
+    for (const object of objectsToProcess) {
+      const objData = recordsByObject[object] || { processed: 0, failed: 0, jobIds: [] };
+      const success = objData.processed - objData.failed;
+
+     //print the response 
+      console.log(`Object: ${object}`);
+      console.log(`Processed Records: ${objData.processed}`);
+      console.log(`Failed Records: ${objData.failed}`);
+      console.log(`Success Records: ${success}`);
+      
+      if (objData.failed > 0) {
+       
+        console.log(`Job IDs with Failures: ${objData.jobIds.join(', ')}`);
+
+      }
+      console.log('---');
+    }
+  });
