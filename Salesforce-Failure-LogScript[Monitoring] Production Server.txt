@@ -1,0 +1,105 @@
+const fs = require('fs');
+const csv = require('csv-parser');
+const axios = require('axios');
+const date = new Date();
+const dd = date.getDate();
+// change this array as per your object needs 
+const objectsToProcess = [
+ // In this Array past the Object Name to get the failed reason 
+  //E.g 'Account' ,'Contact' etc...
+];
+
+const filupload = 'Bulkdata_Logfile.csv';
+const headers = {}; // Initialize headers object
+
+const config = {
+    method: 'post',
+    maxBodyLength: Infinity,
+	// you can change this based on the org whole url from postman 
+    url: 'OrgUrl'
+    headers: {
+        'Cookie': 'BrowserId=322AtQCUEe-1EgGzE1Sfcg; CookieConsentPolicy=0:1; LSKey-c$CookieConsentPolicy=0:1'
+    }
+};
+
+axios.request(config)
+    .then((response) => {
+        const token = response.data.access_token; // Get access token from response
+        headers['Authorization'] = `Bearer ${token}`; // Set Authorization header with token
+
+        const recordsByObject = {}; // Initialize recordsByObject inside the Axios request callback
+
+        fs.createReadStream(filupload)
+            .pipe(csv())
+            .on('data', (row) => {
+               //const user = row['Submitted By']; {if you want to add any conditons
+                const object = row['Object'];
+                const recordsProcessed = parseInt(row['Records Processed']);
+                const recordsFailed = parseInt(row['Records Failed']);
+                const jobIdColumn = findColumnByRegex(row, /Job\s*ID/i);
+                const jobId = row[jobIdColumn];
+
+                if (objectsToProcess.includes(object)) {
+                    if (!recordsByObject[object]) {
+                        recordsByObject[object] = {
+                            processed: 0,
+                            failed: 0,
+                            jobIds: [],
+                        };
+                    }
+
+                    recordsByObject[object].processed += recordsProcessed;
+                    recordsByObject[object].failed += recordsFailed;
+                    if (recordsFailed > 0) {
+                        recordsByObject[object].jobIds.push(jobId);
+                    }
+                }
+            })
+            .on('end', async () => {
+                for (const object of objectsToProcess) {
+                    const objData = recordsByObject[object] || { processed: 0, failed: 0, jobIds: [] };
+                    const success = objData.processed - objData.failed;
+
+                    console.log(`Object: ${object}`);
+                    console.log(`Processed Records: ${objData.processed}`);
+                    console.log(`Failed Records: ${objData.failed}`);
+                    console.log(`Success Records: ${success}`);
+                    if (objData.failed > 0) {
+                        console.log(`Job IDs with Failures: ${objData.jobIds.join(', ')}`);
+                    }
+                    console.log('---');
+                }
+
+                try {
+                    for (const object in recordsByObject) {
+                        if (recordsByObject.hasOwnProperty(object)) {
+                            const jobIds = recordsByObject[object].jobIds;
+                            for (const jobId of jobIds) {
+								// in the url pls provide your instance name
+                                const response = await axios.get(`https://mondaymyday.my.salesforce.com/services/data/v53.0/jobs/ingest/${jobId}/failedResults`, { headers });
+                                const failedRecords = response.data;
+
+                                fs.appendFileSync(`failure_${object}_${dd}_results.csv`, `${failedRecords}\n`);
+                            }
+                        }
+                    }
+
+                    console.log('Failures saved to separate files for each object.');
+                } catch (error) {
+                    console.error('Error processing data:', error);
+                }
+            });
+    })
+    .catch((error) => {
+        console.log(error);
+    });
+
+// Function to find column name by regular expression pattern
+function findColumnByRegex(row, regex) {
+    for (const column in row) {
+        if (row.hasOwnProperty(column) && regex.test(column)) {
+            return column;
+        }
+    }
+    return null;
+}
