@@ -1,0 +1,54 @@
+const fs = require('fs');
+const axios = require('axios');
+
+// Manually set the access token obtained from Postman
+const accessToken = 'Replace with your access token '; 
+
+const headers = {
+  Authorization: `Bearer ${accessToken}`,
+};
+
+// Define your collection of job IDs
+const jobIds = [
+  
+
+  '7505g00000MuMbE', '7505g00000MuMb4', '7505g00000MuMXc', '7505g00000MuMau'
+
+]; // Replace with your collection of job IDs
+
+const resultsArray = [];
+
+// Function to retrieve failure records for a job ID
+async function getFailureRecords(jobId) {
+  try {
+    const response = await axios.get(`https://your-SF-Instance.my.salesforce.com/services/data/v53.0/jobs/ingest/${jobId}/failedResults`, { headers });
+
+    // print the response data
+    console.log(`Response for Job ID ${jobId}:`);
+    console.log(response.data);
+
+    // Append the response data to the text file
+   // fs.appendFileSync('failure_Nomers0910.txt', `Response for Job ID ${jobId}:\n`);
+    fs.appendFileSync('failure_Of_MasterData.txt', response.data + '\n');
+
+    return {
+      JobId: jobId,
+      FailedRecords: response.data,
+    };
+  } catch (error) {
+    console.error(`Error for Job ID ${jobId}:`, error);
+    return {
+      JobId: jobId,
+      FailedRecords: [],
+    };
+  }
+}
+
+// Process each job ID and retrieve failure records
+Promise.all(jobIds.map(getFailureRecords))
+  .then(() => {
+    console.log('All responses appended to the text file.');
+  })
+  .catch((error) => {
+    console.error('Error processing job IDs:', error);
+  });
